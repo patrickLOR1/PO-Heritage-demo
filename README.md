@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PO Heritage — Boilerplate Maestro (Atombox Edition)
 
-## Getting Started
+> CRM de próxima generación con IA. Next.js 14 · Tailwind CSS · Framer Motion · Supabase · Groq
 
-First, run the development server:
+## Stack Tecnológico
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+| Capa | Tecnología |
+|------|-----------|
+| Frontend | Next.js 14+ (App Router) |
+| Estilos | Tailwind CSS v4 + CSS Variables |
+| Animaciones | Framer Motion |
+| BaaS | Supabase (Auth, DB, Edge Functions) |
+| IA | Groq SDK (Llama 3 70B) |
+| Utilidades | clsx · tailwind-merge · lucide-react |
+
+## Estructura del Proyecto
+
+```
+po-heritage-temp/
+├── app/
+│   ├── api/
+│   │   └── chat/route.ts        # Endpoint ARIA SDR (Groq)
+│   ├── dashboard/
+│   │   └── page.tsx             # Pipeline de prospectos
+│   ├── globals.css              # Design system tokens
+│   ├── layout.tsx               # Root layout + SEO metadata
+│   └── page.tsx                 # Landing page
+├── components/
+│   ├── dashboard/
+│   │   └── LeadsDashboard.tsx   # Atom Finance-style pipeline
+│   └── marketing/
+│       ├── Navbar.tsx           # Sticky nav con blur
+│       ├── Hero.tsx             # Hero conversion-focused
+│       ├── Services.tsx         # Feature cards
+│       ├── PricingTable.tsx     # Atombox clone (Blue & Steel)
+│       ├── AiChat.tsx           # Chat widget ARIA
+│       └── Footer.tsx
+├── lib/
+│   ├── site-config.ts           # ⭐ MASTER CONFIG (todo el contenido)
+│   ├── supabase.ts              # Clientes Supabase (browser + server)
+│   └── utils.ts                 # cn(), formatCurrency()
+└── .env.example                 # Variables de entorno requeridas
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup Rápido
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Variables de entorno
+```bash
+cp .env.example .env.local
+```
+Rellena en `.env.local`:
+- `NEXT_PUBLIC_SUPABASE_URL` → URL de tu proyecto Supabase
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` → Anon key de Supabase
+- `GROQ_API_KEY` → API key de [console.groq.com](https://console.groq.com)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. Instalar y correr
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+### 3. Abrir en el navegador
+- **Landing:** http://localhost:3000
+- **Dashboard:** http://localhost:3000/dashboard
+- **API Chat:** POST http://localhost:3000/api/chat
 
-To learn more about Next.js, take a look at the following resources:
+## Personalización
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Todo el contenido del sitio se controla desde un único archivo:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+lib/site-config.ts
+```
 
-## Deploy on Vercel
+Cambia precios, textos, servicios, leads de muestra — sin tocar los componentes.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Filosofía Visual (Blue & Steel)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Token | Valor |
+|-------|-------|
+| Fondo base | `#030712` |
+| Fondo card | `#080f1a` |
+| Azul eléctrico | `#3B82F6` |
+| Gris acero | `#94A3B8` |
+| Bordes | `rgba(255,255,255,0.06)` |
+
+## API — `/api/chat`
+
+```http
+POST /api/chat
+Content-Type: application/json
+
+{
+  "messages": [
+    { "role": "user", "content": "Hola, me interesa saber más sobre PO Heritage" }
+  ]
+}
+```
+
+Respuesta:
+```json
+{
+  "message": "¡Hola! Soy ARIA...",
+  "usage": { "prompt_tokens": 120, "completion_tokens": 85 },
+  "model": "llama3-70b-8192"
+}
+```
+
+## Esquema Supabase (sugerido)
+
+```sql
+-- Prospectos capturados por ARIA
+create table leads (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  company text,
+  email text unique,
+  stage text default 'nuevo',
+  value numeric default 0,
+  ai_score integer default 0,
+  conversation jsonb default '[]'::jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Conversaciones con ARIA
+create table conversations (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid references leads(id) on delete cascade,
+  messages jsonb not null default '[]'::jsonb,
+  created_at timestamptz default now()
+);
+```
