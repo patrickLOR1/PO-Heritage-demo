@@ -9,6 +9,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Falta el ID del precio" }, { status: 400 });
     }
 
+    if (!stripe) {
+      return NextResponse.json({ error: "Stripe no configurado. Contacta por WhatsApp." }, { status: 503 });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [

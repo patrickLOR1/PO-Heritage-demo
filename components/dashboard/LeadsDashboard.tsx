@@ -92,10 +92,10 @@ export default function LeadsDashboard() {
   });
 
   // Team State
-  const [team, setTeam] = useState([
-    { id: 1, name: "Admin Heritage", email: "admin@poheritage.com", role: "Owner", status: "online", avatar: "AH" },
-    { id: 2, name: "Carlos SDR", email: "carlos@poheritage.com", role: "SDR Senior", status: "away", avatar: "CS" },
-    { id: 3, name: "Elena Ventas", email: "elena@poheritage.com", role: "Account Executive", status: "offline", avatar: "EV" },
+  const [team, setTeam] = useState<any[]>([
+    { id: "1", name: "Admin Heritage", email: "admin@poheritage.com", role: "Owner", status: "online", avatar: "AH" },
+    { id: "2", name: "Carlos SDR", email: "carlos@poheritage.com", role: "SDR Senior", status: "away", avatar: "CS" },
+    { id: "3", name: "Elena Ventas", email: "elena@poheritage.com", role: "Account Executive", status: "offline", avatar: "EV" },
   ]);
   const [showHireModal, setShowHireModal] = useState(false);
   const [hireForm, setHireForm] = useState({ name: "", email: "", role: "SDR" });
