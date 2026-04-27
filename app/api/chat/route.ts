@@ -1,5 +1,65 @@
-import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-export async function POST() {
-  return NextResponse.json({ content: "Hello from ARIA (Debug Mode)" });
+import { NextResponse } from "next/server";
+import { SITE_CONFIG } from "@/lib/site-config";
+
+export async function POST(req: Request) {
+  try {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({
+        content: "¡Hola! Soy ARIA. Actualmente estoy en modo mantenimiento, pero puedes contactar a Patrick directamente por WhatsApp.",
+      });
+    }
+
+    const { messages } = await req.json();
+
+    const sanitizedMessages = messages.map((m: any) => ({
+      role: m.role,
+      content: (m.content || "").replace(/[<>]/g, ""),
+    }));
+
+    const systemPrompt = `Eres ARIA, la asistente virtual de ${SITE_CONFIG.company.name} — una agencia de desarrollo web y automatización.
+Tu objetivo es ayudar a los visitantes a entender cómo podemos hacer crecer su negocio con tecnología.
+
+CONTEXTO DE LA EMPRESA:
+- Servicios: Sitios web premium, chatbots de WhatsApp, automatización de negocios, CRMs a la medida.
+- Precios: Starter $2,500 MXN | Growth $4,500 MXN | Scale $8,500 MXN.
+
+REGLAS:
+- Responde siempre en español.
+- Mantén respuestas cortas (máx 3 oraciones).
+- Siempre intenta que agenden una llamada o usen el botón de contacto.`;
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...sanitizedMessages,
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Groq API error: ${response.status}`);
+
+    const data = await response.json();
+
+    return NextResponse.json({
+      content: data.choices[0].message.content,
+    });
+  } catch (error: any) {
+    console.error("ARIA Error:", error);
+    return NextResponse.json({
+      content: "Disculpa, tuve un error de conexión. ¿Te gustaría hablar con Patrick por WhatsApp?",
+    });
+  }
 }
