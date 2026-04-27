@@ -10,24 +10,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ prospects: [], message: "IA no configurada." });
     }
 
-    const { Groq } = await import("groq-sdk");
-    const groq = new Groq({ apiKey });
-
     const { industry, location, size } = await request.json();
 
     const prompt = `Genera una lista de 5 empresas ficticias pero realistas en la industria "${industry}" ubicadas en "${location}" de tamaño "${size}". Para cada una devuelve JSON con: name, company, email, phone, score (1-100), value (estimado en MXN). Solo responde con el JSON array, sin explicaciones.`;
 
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [
-        { role: "system", content: "Eres un generador de datos de prospectos B2B. Solo responde JSON válido." },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.8,
-      max_tokens: 1000,
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          { role: "system", content: "Eres un generador de datos de prospectos B2B. Solo responde JSON válido." },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.8,
+        max_tokens: 1000,
+      }),
     });
 
-    const content = response.choices[0].message.content || "[]";
+    if (!response.ok) throw new Error(`Groq API error: ${response.status}`);
+
+    const data = await response.json();
+    const content = data.choices[0].message.content || "[]";
+
     let prospects = [];
     try {
       const jsonMatch = content.match(/\[[\s\S]*\]/);
