@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Groq } from "groq-sdk";
 import { NextResponse } from "next/server";
 import { SITE_CONFIG } from "@/lib/site-config";
