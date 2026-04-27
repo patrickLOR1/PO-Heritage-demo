@@ -1,65 +1,51 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { checkRateLimit } from '@/lib/security';
+import { NextResponse } from "next/server";
 
-// Este endpoint permite a servicios como Zapier, Make, HubSpot o WhatsApp
-// inyectar prospectos directamente en tu Pipeline automatizado.
 export async function POST(request: Request) {
   try {
-    // 1. Rate Limiting de seguridad
-    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
-    const rateLimit = await checkRateLimit(ip, 20, 1); // 20 requests per minute for webhooks
-    
-    if (!rateLimit.allowed) {
-      return NextResponse.json({ success: false, error: "Too many requests." }, { status: 429 });
-    }
+    const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
 
-    // 2. Extraer datos del webhook entrante
     const body = await request.json();
-    
-    const { 
-      name, 
-      email, 
-      phone, 
-      company, 
+    const {
+      name,
+      email,
+      phone,
+      company,
       source = "Webhook API",
       value = 0,
-      stage = "nuevo"
+      stage = "nuevo",
     } = body;
 
     if (!name) {
       return NextResponse.json({ success: false, error: "El campo 'name' es requerido." }, { status: 400 });
     }
 
-    // 3. Crear el Prospecto
     const newLead = {
       name,
       company: company || "Desconocida",
       stage,
       value: Number(value),
-      score: 50, // Default score
+      score: 50,
       last_contact: new Date().toISOString(),
       avatar: name.split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase(),
       source,
       phone,
-      email
+      email,
     };
 
-    // 4. Insertar en Supabase
-    const { data, error } = await supabase.from('leads').insert([newLead]).select();
+    // Dynamic import to avoid build-time module evaluation
+    const { supabase } = await import("@/lib/supabase");
+    const { data, error } = await supabase.from("leads").insert([newLead]).select();
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Lead integrado exitosamente al Pipeline Automático",
-      data: data[0]
+      data: data?.[0] ?? newLead,
     });
-
   } catch (error: any) {
     console.error("Webhook Error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

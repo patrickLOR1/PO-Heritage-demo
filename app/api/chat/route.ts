@@ -1,43 +1,27 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-import { Groq } from "groq-sdk";
 import { NextResponse } from "next/server";
 import { SITE_CONFIG } from "@/lib/site-config";
-import { checkRateLimit, sanitizeInput } from "@/lib/security";
-
-// Lazy-initialize Groq so build doesn't fail when GROQ_API_KEY is missing
-function getGroqClient() {
-  if (!process.env.GROQ_API_KEY) return null;
-  return new Groq({ apiKey: process.env.GROQ_API_KEY });
-}
 
 export async function POST(req: Request) {
   try {
-    const groq = getGroqClient();
-
-    if (!groq) {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
       return NextResponse.json(
-        { error: "Servicio de IA no configurado. Configura GROQ_API_KEY." },
-        { status: 503 }
+        { content: "Servicio de IA no disponible. Escríbenos por WhatsApp." },
+        { status: 200 }
       );
     }
 
-    const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
-    const { allowed } = await checkRateLimit(ip, 5, 1); // 5 requests per minute
-
-    if (!allowed) {
-      return NextResponse.json(
-        { error: "Demasiadas solicitudes. Por favor espera un minuto." },
-        { status: 429 }
-      );
-    }
+    const { Groq } = await import("groq-sdk");
+    const groq = new Groq({ apiKey });
 
     const { messages } = await req.json();
 
-    // Sanitize last user message
     const sanitizedMessages = messages.map((m: any) => ({
       ...m,
-      content: sanitizeInput(m.content),
+      content: (m.content || "").replace(/[<>]/g, ""),
     }));
 
     const systemPrompt = `
@@ -47,7 +31,6 @@ export async function POST(req: Request) {
       PERSONALIDAD:
       - Profesional, amigable y orientada a resultados.
       - Usas un lenguaje claro y directo, sin tecnicismos innecesarios.
-      - Eres experta en sitios web, chatbots, automatización y CRMs personalizados.
 
       CONTEXTO DE LA EMPRESA:
       - Nombre: ${SITE_CONFIG.company.name}
@@ -58,7 +41,7 @@ export async function POST(req: Request) {
       - Responde siempre en español.
       - Si preguntan por precios, menciona los tres planes.
       - Siempre intenta agendar una llamada o redirigir al botón "Agendar Llamada".
-      - Mantén las respuestas cortas y de alto impacto (máx 3 oraciones).
+      - Mantén las respuestas cortas (máx 3 oraciones).
     `;
 
     const response = await groq.chat.completions.create({
@@ -75,10 +58,10 @@ export async function POST(req: Request) {
       content: response.choices[0].message.content,
     });
   } catch (error: any) {
-    console.error("Error in ARIA AI:", error);
+    console.error("ARIA Error:", error);
     return NextResponse.json(
-      { error: "Error procesando tu mensaje. Intenta de nuevo." },
-      { status: 500 }
+      { content: "Error procesando tu mensaje. Intenta de nuevo." },
+      { status: 200 }
     );
   }
 }

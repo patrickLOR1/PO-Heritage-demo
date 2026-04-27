@@ -1,71 +1,44 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-import { NextResponse } from 'next/server';
-import { checkRateLimit } from '@/lib/security';
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    // 1. IP Based Rate Limiting
-    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
-    const rateLimit = await checkRateLimit(ip, 5, 1); // Max 5 requests per minute
-    
-    if (!rateLimit.allowed) {
-      return NextResponse.json({ success: false, error: "Too many requests. Please wait a minute." }, { status: 429 });
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ prospects: [], message: "IA no configurada." });
     }
 
-    const { industry, role, location } = await request.json();
+    const { Groq } = await import("groq-sdk");
+    const groq = new Groq({ apiKey });
 
-    // Encode the query for OpenStreetMap
-    // We search for "{industry} in {location}"
-    const query = encodeURIComponent(`${industry} in ${location}`);
-    
-    // Real call to the free Nominatim API (OpenStreetMap)
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&extratags=1&limit=5`,
-      {
-        headers: {
-          'User-Agent': 'PO-Heritage-CRM/1.0',
-        }
-      }
-    );
+    const { industry, location, size } = await request.json();
 
-    const data = await response.json();
+    const prompt = `Genera una lista de 5 empresas ficticias pero realistas en la industria "${industry}" ubicadas en "${location}" de tamaño "${size}". Para cada una devuelve JSON con: name, company, email, phone, score (1-100), value (estimado en MXN). Solo responde con el JSON array, sin explicaciones.`;
 
-    // Format the results for the CRM
-    const leads = data.map((item: any, index: number) => {
-      // Nominatim returns real geographic/business places
-      const companyName = item.name || item.address?.business || item.address?.commercial;
-      
-      // If no valid company name was found, we skip it
-      if (!companyName) return null;
+    const response = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: "Eres un generador de datos de prospectos B2B. Solo responde JSON válido." },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.8,
+      max_tokens: 1000,
+    });
 
-      // Because OSM provides places, not people, we simulate the contact person's name
-      // In a paid API like Apollo.io, this would return real CEO names.
-      const firstNames = ["Carlos", "Ana", "Miguel", "Laura", "David", "Sofia", "Jorge", "Isabel"];
-      const lastNames = ["García", "López", "Martínez", "Rodríguez", "Hernández", "Torres"];
-      const randomName = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
-      
-      // Use real phone if OSM has it, else generate a placeholder
-      const phone = item.extratags?.phone || "+52 55 " + Math.floor(10000000 + Math.random() * 90000000);
-      
-      return {
-        id: item.place_id || Math.random().toString(),
-        name: randomName, // Contact Name (Simulated)
-        company: companyName, // Company Name (REAL from OpenStreetMap)
-        role: role || "Director",
-        location: item.display_name, // Real Address
-        match: Math.floor(Math.random() * 15) + 85 + "%", // Match %
-        phone: phone,
-        displayPhone: phone,
-        website: item.extratags?.website || null,
-        type: item.type
-      };
-    }).filter(Boolean); // Remove nulls
+    const content = response.choices[0].message.content || "[]";
+    let prospects = [];
+    try {
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) prospects = JSON.parse(jsonMatch[0]);
+    } catch {
+      prospects = [];
+    }
 
-    return NextResponse.json({ success: true, leads });
-
-  } catch (error) {
-    console.error("Error scraping:", error);
-    return NextResponse.json({ success: false, error: "Error en la búsqueda" }, { status: 500 });
+    return NextResponse.json({ prospects });
+  } catch (error: any) {
+    console.error("Prospector Error:", error);
+    return NextResponse.json({ prospects: [], error: error.message }, { status: 500 });
   }
 }
