@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Terminal, Cpu, DollarSign, MessageSquare, HelpCircle, Power } from "lucide-react";
+import { Terminal, Cpu, DollarSign, MessageSquare, HelpCircle, Power, Layout } from "lucide-react";
 import Hero from "./Hero";
 import Services from "./Services";
 import PricingTable from "./PricingTable";
 import AiChat from "./AiChat";
 import Faq from "./Faq";
+import Projects from "./Projects";
 import { SITE_CONFIG } from "@/lib/site-config";
 import Link from "next/link";
 import { uiSound } from "@/lib/audio";
@@ -20,7 +21,7 @@ const SplineScene = dynamic(() => import("@splinetool/react-spline"), {
   loading: () => <div className="w-full h-full bg-transparent" />
 });
 
-type TabId = "home" | "services" | "pricing" | "chat" | "faq";
+type TabId = "home" | "services" | "projects" | "pricing" | "chat" | "faq";
 
 export default function SpaceshipConsole() {
   const [activeTab, setActiveTab] = useState<TabId>("home");
@@ -54,9 +55,10 @@ export default function SpaceshipConsole() {
   const tabs = [
     { id: "home", label: "Core", icon: Power, key: "1" },
     { id: "services", label: "Capab.", icon: Cpu, key: "2" },
-    { id: "pricing", label: "Plans", icon: DollarSign, key: "3" },
-    { id: "chat", label: "ARIA", icon: MessageSquare, key: "4" },
-    { id: "faq", label: "Data", icon: HelpCircle, key: "5" },
+    { id: "projects", label: "Work", icon: Layout, iconImport: true, key: "3" },
+    { id: "pricing", label: "Plans", icon: DollarSign, key: "4" },
+    { id: "chat", label: "ARIA", icon: MessageSquare, key: "5" },
+    { id: "faq", label: "Data", icon: HelpCircle, key: "6" },
   ] as const;
 
   useEffect(() => {
@@ -176,6 +178,7 @@ export default function SpaceshipConsole() {
               <div className="max-w-[1400px] mx-auto w-full pb-20">
                 {activeTab === "home" && <Hero />}
                 {activeTab === "services" && <Services />}
+                {activeTab === "projects" && <Projects />}
                 {activeTab === "pricing" && <PricingTable />}
                 {activeTab === "chat" && <AiChat />}
                 {activeTab === "faq" && <Faq />}

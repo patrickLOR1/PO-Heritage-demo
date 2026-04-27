@@ -257,7 +257,7 @@ export default function PricingTable() {
           transition={{ delay: 0.3 }}
           className="text-center text-[12px] text-slate-600 mt-10"
         >
-          Todos los precios en MXN + IVA · Prueba gratuita de 14 días en planes Core y Tactical · Cancela cuando quieras
+          Todos los precios en MXN + IVA · 14 días de garantía en planes Growth y Scale · Cancela cuando quieras
         </motion.p>
       </div>
     </section>
